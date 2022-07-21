@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "threads": "^1.7.0",
+    "tiny-worker": "^2.3.0"
+  }
+}
