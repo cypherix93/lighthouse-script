@@ -14,7 +14,6 @@ https://egifter.qa-aurora.egifter.dev/bitcoin-storefront
 https://egifter.qa-aurora.egifter.dev/bitcoin-sv
 https://egifter.qa-aurora.egifter.dev/bitcoin-sv/1-800-baskets-gift-card-bitcoin-sv
 https://egifter.qa-aurora.egifter.dev/bitcoin/1-800-baskets-gift-card-bitcoin
-https://egifter.qa-aurora.egifter.dev/bulk/terms
 https://egifter.qa-aurora.egifter.dev/buy-gift-cards-with-apple-pay
 https://egifter.qa-aurora.egifter.dev/buy-gift-cards-with-bitcoin
 https://egifter.qa-aurora.egifter.dev/buy-gift-cards-with-bitcoin-cash
