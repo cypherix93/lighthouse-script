@@ -43,8 +43,7 @@ async function main() {
     const urlsToTest = sitemapUrls
         .filter(x =>
             !x.includes('-gift-card-') // payment method pages
-        )
-        .slice(0, 4);
+        );
 
     consola.info(`Filtered down to ${urlsToTest.length} URLs`);
 
