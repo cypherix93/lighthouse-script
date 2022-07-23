@@ -1,6 +1,11 @@
 import os from 'os';
+import consola from 'consola';
+
 import {getUrls} from './getUrls.mjs';
 import {Pool, spawn, Worker} from 'threads';
+
+// consola wrap consoles
+consola.wrapAll();
 
 const SITE_HOST = `egifter.qa-aurora.egifter.dev`;
 
@@ -24,15 +29,32 @@ async function main() {
 
     const sitemapUrls = await getUrls(SITE_HOST);
 
-    for (const url of sitemapUrls) {
+    consola.info(`Loaded ${sitemapUrls.length} URLs from sitemap.xml`);
+
+    const urlsToTest = sitemapUrls
+        .filter(x =>
+            !x.includes('-gift-card-') // payment method pages
+        );
+
+    consola.info(`Filtered down to ${urlsToTest.length} URLs`);
+
+    for (const url of urlsToTest) {
         lighthouseWorkerPool
-            .queue(worker =>
-                worker.runLighthouse(url, LH_OPTIONS)
-            )
+            .queue(worker => {
+                consola.info(`Started processing URL: ${url}`);
+
+                return worker.runLighthouse(url, LH_OPTIONS);
+            })
             .then(result => {
-                console.log(result);
+                consola.success(`Finished processing URL: ${url}\n${result}`);
+            })
+            .catch(err => {
+                consola.error(`Error processing URL: ${url}`);
+                throw err;
             });
     }
+
+    consola.info(`Queued ${urlsToTest.length} URLs for processing`);
 
     // cleanup on exit
     const signals = [`exit`, `uncaughtException`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `SIGTERM`];
