@@ -66,9 +66,10 @@ async function main() {
             .then(() => {
                 // progressBar.increment();
             })
-            .catch(err => {
+            .catch(error => {
                 consola.error(`Error processing URL: ${url}`);
-                throw err;
+
+                return writeReportResult(url, null, error);
             });
 
         tasks.push(task);
@@ -101,7 +102,7 @@ async function main() {
 }
 
 async function writeReportResult(url, report, logs) {
-    const outDir = './.output';
+    const outDir = `./.output/${new Date().toISOString().replace(/T.*/, '')}`;
     const reportDir = path.resolve(outDir, 'reports');
     const logsDir = path.resolve(outDir, 'logs');
 
@@ -116,13 +117,17 @@ async function writeReportResult(url, report, logs) {
     report = report.replace(/^.*?\n/, '');
 
     try {
-        await fs.mkdirp(reportDir);
-        await fs.mkdirp(logsDir);
+        if (report) {
+            await fs.mkdirp(reportDir);
+            await fs.writeFile(reportOutPath, report, 'utf8');
 
-        await fs.writeFile(reportOutPath, report, 'utf8');
-        await fs.writeFile(logOutPath, logs, 'utf8');
+            consola.success(`Report saved: ${reportOutPath}`);
+        }
 
-        consola.success(`Report saved: ${reportOutPath}`);
+        if (logs) {
+            await fs.mkdirp(logsDir);
+            await fs.writeFile(logOutPath, logs, 'utf8');
+        }
     }
     catch (error) {
         consola.error(`Report failed to save for URL: ${url}\nReason: ${error}`);
