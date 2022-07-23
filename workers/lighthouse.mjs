@@ -13,11 +13,7 @@ expose({
                     return;
                 }
 
-                if (stderr) {
-                    console.error(stderr);
-                }
-
-                resolve(stdout);
+                resolve({stdout, stderr});
             });
         });
     }
