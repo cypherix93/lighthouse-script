@@ -1,4 +1,5 @@
 import {expose} from 'threads/worker';
+import {exec} from 'child_process';
 
 expose({
     runLighthouse(url, options) {
