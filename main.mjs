@@ -6,20 +6,26 @@ import consola from 'consola';
 import {getUrls} from './getUrls.mjs';
 import {Pool, spawn, Worker} from 'threads';
 
-import cliProgress from 'cli-progress';
+// import cliProgress from 'cli-progress';
 
 // consola wrap consoles
 consola.wrapAll();
 
-const SITE_HOST = `egifter.qa-aurora.egifter.dev`;
+const SITE_HOST = process.env.SITE_HOST || `egifter.qa-aurora.egifter.dev`;
 
-const LH_OPTIONS = [
+const LH_OPTIONS = process.env.LH_OPTIONS?.split(/\s+/) || [
     `--chrome-flags="--headless"`,
     `--preset="desktop"`,
     `--output="json"`
 ];
 
-const WORKER_POOL_SIZE = Math.min(4, os.cpus().length / 2); // 4 or half of available cores
+const WORKER_POOL_SIZE = process.env.WORKER_POOL_SIZE || Math.min(4, os.cpus().length / 2); // 4 or half of available cores
+
+const OUTPUT_PATH = process.env.OUTPUT_PATH || './.output';
+
+const outDir = path.resolve(OUTPUT_PATH, new Date().toISOString().replace(/T.*/, ''));
+const reportDir = path.resolve(outDir, 'reports');
+const logsDir = path.resolve(outDir, 'logs');
 
 async function main() {
     const lighthouseWorkerPool = Pool(
@@ -42,10 +48,15 @@ async function main() {
 
     const urlsToTest = sitemapUrls
         .filter(x =>
-            !x.includes('-gift-card-') // payment method pages
+            !x.includes('-gift-card-') // payment method gift card pages
         );
 
     consola.info(`Filtered down to ${urlsToTest.length} URLs`);
+
+    const urlsFilePath = path.resolve(outDir, 'urls.log');
+    await writeOutputFile(urlsFilePath, urlsToTest.join('\n'));
+
+    consola.info(`Test URLs logged in: ${urlsFilePath}`);
 
     // progressBar.start(urlsToTest.length, 0);
 
@@ -58,16 +69,22 @@ async function main() {
 
                 return worker.runLighthouse(url, LH_OPTIONS);
             })
-            .then(({stdout, stderr}) => {
+            .then(({stdout, stderr, error}) => {
+                if (error) {
+                    consola.error(`Error processing URL: ${url}\nReason: ${error}`);
+
+                    return writeReportResult(url, null, error);
+                }
+
                 consola.success(`Finished processing URL: ${url}`);
 
                 return writeReportResult(url, stdout, stderr);
             })
-            .then(() => {
-                // progressBar.increment();
-            })
+            // .then(() => {
+            //     progressBar.increment();
+            // })
             .catch(error => {
-                consola.error(`Error processing URL: ${url}`);
+                consola.fatal(`Error processing URL: ${url}`);
 
                 return writeReportResult(url, null, error);
             });
@@ -81,7 +98,11 @@ async function main() {
     const signals = [`exit`, `uncaughtException`, `SIGINT`, `SIGUSR1`, `SIGUSR2`, `SIGTERM`];
 
     signals.forEach((eventType) => {
-        process.on(eventType, () => {
+        process.on(eventType, (...args) => {
+            if (eventType !== 'exit') {
+                consola.fatal(`Process received signal: ${eventType}\nargs: ${args.join('\n')}`);
+            }
+
             consola.info(`Terminating worker pool...`);
 
             lighthouseWorkerPool.terminate();
@@ -99,39 +120,43 @@ async function main() {
     await Promise.all(tasks);
 
     consola.success(`All done! 🎉`);
+
+    process.exit(0);
 }
 
 async function writeReportResult(url, report, logs) {
-    const outDir = `./.output/${new Date().toISOString().replace(/T.*/, '')}`;
-    const reportDir = path.resolve(outDir, 'reports');
-    const logsDir = path.resolve(outDir, 'logs');
-
     const fileName = url
         .replace(/^https?:\/\/(.*?)\//, '')
         .replace(/\//g, '_') || '_';
 
-    const reportOutPath = path.join(reportDir, fileName + '.json');
-    const logOutPath = path.join(logsDir, fileName + '.log');
-
-    // delete the first line (stdout logs the command as first line)
-    report = report.replace(/^.*?\n/, '');
-
     try {
         if (report) {
-            await fs.mkdirp(reportDir);
-            await fs.writeFile(reportOutPath, report, 'utf8');
+            // delete the first line (stdout logs the command as first line)
+            report = report.replace(/^.*?\n/, '');
+
+            const reportOutPath = path.join(reportDir, fileName + '.json');
+
+            await writeOutputFile(reportOutPath, report);
 
             consola.success(`Report saved: ${reportOutPath}`);
         }
 
         if (logs) {
-            await fs.mkdirp(logsDir);
-            await fs.writeFile(logOutPath, logs, 'utf8');
+            const logOutPath = path.join(logsDir, fileName + '.log');
+
+            await writeOutputFile(logOutPath, logs);
         }
     }
     catch (error) {
         consola.error(`Report failed to save for URL: ${url}\nReason: ${error}`);
     }
+}
+
+async function writeOutputFile(filePath, fileContents) {
+    const dirPath = path.dirname(filePath);
+
+    await fs.mkdirp(dirPath);
+    await fs.writeFile(filePath, fileContents, 'utf8');
 }
 
 main();
