@@ -28,6 +28,8 @@ const reportDir = path.resolve(outDir, 'reports');
 const logsDir = path.resolve(outDir, 'logs');
 
 async function main() {
+    consola.start(`Warming up engines...`);
+
     const lighthouseWorkerPool = Pool(
         () => spawn(
             new Worker('./workers/lighthouse.mjs')
@@ -41,6 +43,8 @@ async function main() {
     // const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 
     consola.ready(`Worker Pool initialized with ${WORKER_POOL_SIZE} workers`);
+
+    consola.info(`Reports and Logs will be written to: ${outDir}`);
 
     const sitemapUrls = await getUrls(SITE_HOST);
 
@@ -59,6 +63,8 @@ async function main() {
     consola.info(`Test URLs logged in: ${urlsFilePath}`);
 
     // progressBar.start(urlsToTest.length, 0);
+
+    consola.start(`Blast off! 🚀`);
 
     const tasks = [];
 
