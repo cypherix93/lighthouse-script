@@ -6,9 +6,9 @@ expose({
         const command = `yarn lighthouse ${url} ${options.join(' ')}`;
 
         return new Promise((resolve, reject) => {
-            exec(command, (err, stdout, stderr) => {
-                if (err) {
-                    reject(err);
+            exec(command, {maxBuffer: 10 * 1024 * 1024}, (error, stdout, stderr) => {
+                if (error) {
+                    resolve({error});
 
                     return;
                 }
